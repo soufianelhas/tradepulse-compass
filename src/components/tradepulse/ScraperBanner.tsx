@@ -29,6 +29,7 @@ export function ScraperBanner({ onComplete }: { onComplete: () => void }) {
       }, 700);
       return () => clearTimeout(t);
     }
+    return undefined;
   }, [progress, onComplete]);
 
   if (dismissed) return null;
