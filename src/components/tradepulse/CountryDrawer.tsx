@@ -1,0 +1,255 @@
+import { useEffect, useRef, useState } from "react";
+import { X, FileDown, Table2 } from "lucide-react";
+import {
+  commerceSeries,
+  demandSeries,
+  landedCostBreakdown,
+  signum,
+  supplySeries,
+  type Market,
+} from "@/lib/tradepulse-data";
+
+const TABS = [
+  { id: "demand", label: "Demand Signals" },
+  { id: "supply", label: "Supply & Manifests" },
+  { id: "commerce", label: "Local E-Commerce" },
+  { id: "cost", label: "Landed Cost" },
+] as const;
+
+type TabId = (typeof TABS)[number]["id"];
+
+function MiniChart({
+  data,
+  labelA,
+  labelB,
+}: {
+  data: { week: string; a: number; b: number }[];
+  labelA: string;
+  labelB: string;
+}) {
+  const w = 560;
+  const h = 180;
+  const all = data.flatMap((d) => [d.a, d.b]);
+  const min = Math.min(...all);
+  const max = Math.max(...all);
+  const px = (i: number) => (i / (data.length - 1)) * (w - 20) + 10;
+  const py = (v: number) => h - 20 - ((v - min) / (max - min || 1)) * (h - 40);
+  const path = (key: "a" | "b") => data.map((d, i) => `${i ? "L" : "M"}${px(i)},${py(d[key])}`).join(" ");
+
+  return (
+    <figure className="rounded-md border border-border bg-canvas p-3">
+      <svg viewBox={`0 0 ${w} ${h}`} className="h-auto w-full" role="img" aria-label={`${labelA} versus ${labelB} over 12 weeks`}>
+        <path d={path("a")} fill="none" stroke="var(--accent-cyan)" strokeWidth="2" />
+        <path d={path("b")} fill="none" stroke="var(--accent-brand)" strokeWidth="2" strokeDasharray="4 3" />
+      </svg>
+      <figcaption className="mt-2 flex flex-wrap gap-4 text-[11px] text-muted-foreground">
+        <span className="inline-flex items-center gap-1.5">
+          <span className="h-0.5 w-4 bg-cyan" aria-hidden="true" />
+          {labelA}
+        </span>
+        <span className="inline-flex items-center gap-1.5">
+          <span className="h-0.5 w-4 bg-primary" aria-hidden="true" />
+          {labelB}
+        </span>
+      </figcaption>
+    </figure>
+  );
+}
+
+function Stat({ label, value, tone }: { label: string; value: string; tone?: string }) {
+  return (
+    <div className="rounded-md border border-border bg-canvas p-3">
+      <p className="text-[11px] text-muted-foreground">{label}</p>
+      <p className={`num mt-1 text-lg font-semibold ${tone ?? "text-foreground"}`}>{value}</p>
+    </div>
+  );
+}
+
+export function CountryDrawer({
+  market,
+  origin,
+  currency,
+  onClose,
+}: {
+  market: Market | null;
+  origin: string;
+  currency: string;
+  onClose: () => void;
+}) {
+  const [tab, setTab] = useState<TabId>("demand");
+  const panelRef = useRef<HTMLDivElement>(null);
+  const open = market !== null;
+
+  useEffect(() => {
+    if (!open) return undefined;
+    setTab("demand");
+    const prev = document.activeElement as HTMLElement | null;
+    panelRef.current?.querySelector<HTMLElement>("button")?.focus();
+
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        onClose();
+        return;
+      }
+      if (e.key !== "Tab" || !panelRef.current) return;
+      const nodes = panelRef.current.querySelectorAll<HTMLElement>(
+        'button:not([disabled]), a[href], input, select, [tabindex]:not([tabindex="-1"])',
+      );
+      if (nodes.length === 0) return;
+      const first = nodes[0]!;
+      const last = nodes[nodes.length - 1]!;
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    };
+    document.addEventListener("keydown", onKey);
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      document.body.style.overflow = "";
+      prev?.focus();
+    };
+  }, [open, onClose]);
+
+  if (!market) return null;
+  const breakdown = landedCostBreakdown(market);
+
+  return (
+    <div className="fixed inset-0 z-50">
+      <div
+        className="absolute inset-0 bg-black/70 backdrop-blur-[2px]"
+        onClick={onClose}
+        aria-hidden="true"
+      />
+      <div
+        ref={panelRef}
+        role="dialog"
+        aria-modal="true"
+        aria-label={`${market.country} deep-dive analytics`}
+        className="absolute inset-y-0 right-0 flex w-full max-w-2xl flex-col border-l border-border-strong bg-surface shadow-[var(--shadow-panel)]"
+      >
+        <header className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3 border-b border-border p-4">
+          <div className="min-w-0">
+            <h2 className="flex min-w-0 items-center gap-2 text-lg font-semibold">
+              <span aria-hidden="true">{market.flag}</span>
+              <span className="truncate">{market.country}</span>
+            </h2>
+            <p className="mt-0.5 truncate text-xs text-muted-foreground">
+              Export origin: {origin} · Lane currency: {currency} · {market.note}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close deep-dive drawer (Escape)"
+            className="grid h-9 w-9 shrink-0 place-items-center rounded-md border border-border bg-canvas text-muted-foreground hover:bg-surface-hover hover:text-foreground"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </header>
+
+        <div role="tablist" aria-label="Signal analytics tabs" className="flex overflow-x-auto border-b border-border">
+          {TABS.map((t) => (
+            <button
+              key={t.id}
+              role="tab"
+              id={`tab-${t.id}`}
+              aria-selected={tab === t.id}
+              aria-controls={`panel-${t.id}`}
+              onClick={() => setTab(t.id)}
+              className={`shrink-0 border-b-2 px-4 py-2.5 text-xs font-medium transition-colors ${
+                tab === t.id
+                  ? "border-cyan text-foreground"
+                  : "border-transparent text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
+
+        <div className="min-h-0 flex-1 overflow-y-auto p-4">
+          {tab === "demand" && (
+            <div role="tabpanel" id="panel-demand" aria-labelledby="tab-demand" className="space-y-4">
+              <div className="grid gap-3 sm:grid-cols-2">
+                <Stat label="30d search velocity" value={`${signum(market.searchVelocity)}%`} tone="text-signal-green" />
+                <Stat label="Social buzz index" value={`${(60 + market.searchVelocity / 3).toFixed(0)}`} />
+              </div>
+              <MiniChart data={demandSeries(market)} labelA="Search velocity index" labelB="Social media buzz" />
+            </div>
+          )}
+          {tab === "supply" && (
+            <div role="tabpanel" id="panel-supply" aria-labelledby="tab-supply" className="space-y-4">
+              <div className="grid gap-3 sm:grid-cols-2">
+                <Stat label="60d inbound TEU volume" value={`${signum(market.teuVolume)}%`} />
+                <Stat label="Spot ocean freight" value={`$${market.freightCost.toLocaleString()}/TEU`} />
+              </div>
+              <MiniChart data={supplySeries(market)} labelA="Weekly B/L TEU volume" labelB="Spot freight rate ($)" />
+            </div>
+          )}
+          {tab === "commerce" && (
+            <div role="tabpanel" id="panel-commerce" aria-labelledby="tab-commerce" className="space-y-4">
+              <div className="grid gap-3 sm:grid-cols-3">
+                <Stat label="Out-of-stock rate" value={`${market.stockoutRate.toFixed(1)}%`} tone="text-signal-amber" />
+                <Stat label="Active competitor listings" value={`${Math.round(120 + market.teuVolume * 4)}`} />
+                <Stat label="Local price inflation" value={`${(market.stockoutRate / 6).toFixed(1)}%`} />
+              </div>
+              <MiniChart data={commerceSeries(market)} labelA="Out-of-stock rate (%)" labelB="Competitor listings" />
+            </div>
+          )}
+          {tab === "cost" && (
+            <div role="tabpanel" id="panel-cost" aria-labelledby="tab-cost" className="space-y-3">
+              <table className="w-full text-sm">
+                <caption className="sr-only">Landed cost breakdown per unit</caption>
+                <tbody>
+                  {breakdown.map((b) => (
+                    <tr key={b.label} className="border-b border-border">
+                      <th scope="row" className="py-2.5 text-left font-normal text-muted-foreground">
+                        {b.label}
+                      </th>
+                      <td className="num py-2.5 text-right text-foreground">${b.value.toFixed(2)}</td>
+                    </tr>
+                  ))}
+                  <tr>
+                    <th scope="row" className="py-2.5 text-left font-medium">
+                      Total landed cost
+                    </th>
+                    <td className="num py-2.5 text-right text-lg font-semibold text-cyan">
+                      ${market.landedCost.toFixed(2)}
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+              <p className="text-[11px] text-muted-foreground">
+                MFN baseline vs preferential rate applied where a valid FTA claim exists on this lane.
+              </p>
+            </div>
+          )}
+        </div>
+
+        <footer className="flex flex-wrap gap-2 border-t border-border bg-surface p-4">
+          <button
+            type="button"
+            className="inline-flex min-h-10 flex-1 items-center justify-center gap-2 rounded-md px-4 text-sm font-medium text-primary-foreground"
+            style={{ background: "var(--gradient-brand)" }}
+          >
+            <FileDown className="h-4 w-4" aria-hidden="true" />
+            Export Executive PDF Report
+          </button>
+          <button
+            type="button"
+            className="inline-flex min-h-10 flex-1 items-center justify-center gap-2 rounded-md border border-border-strong bg-canvas px-4 text-sm font-medium text-foreground hover:border-cyan hover:text-cyan"
+          >
+            <Table2 className="h-4 w-4" aria-hidden="true" />
+            Download CSV Raw Data
+          </button>
+        </footer>
+      </div>
+    </div>
+  );
+}
