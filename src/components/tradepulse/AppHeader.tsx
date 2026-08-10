@@ -6,8 +6,9 @@ const ORIGINS = [
   { flag: "🇲🇽", name: "Mexico" },
   { flag: "🇻🇳", name: "Vietnam" },
   { flag: "🇮🇳", name: "India" },
+  { flag: "🇲🇦", name: "Morocco" },
 ];
-const CURRENCIES = ["USD", "EUR", "GBP"];
+const CURRENCIES = ["USD", "EUR", "GBP", "MAD"];
 
 function Selector({
   label,
