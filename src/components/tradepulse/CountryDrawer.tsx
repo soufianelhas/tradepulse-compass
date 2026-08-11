@@ -3,20 +3,34 @@ import { X, FileDown, Table2 } from "lucide-react";
 import {
   commerceSeries,
   demandSeries,
+  getMarketFit,
   landedCostBreakdown,
   signum,
   supplySeries,
   type Market,
 } from "@/lib/tradepulse-data";
+import {
+  ChannelPanel,
+  CompetitivePanel,
+  IntentPanel,
+  LocalizationPanel,
+  RiskPanel,
+} from "@/components/tradepulse/MarketFitPanels";
 
 const TABS = [
   { id: "demand", label: "Demand Signals" },
   { id: "supply", label: "Supply & Manifests" },
   { id: "commerce", label: "Local E-Commerce" },
   { id: "cost", label: "Landed Cost" },
+  { id: "intent", label: "Intent & Chatter" },
+  { id: "sov", label: "Competitive SOV" },
+  { id: "localization", label: "Localization" },
+  { id: "channels", label: "Channels & KOLs" },
+  { id: "risk", label: "Friction & Risk" },
 ] as const;
 
 type TabId = (typeof TABS)[number]["id"];
+
 
 function MiniChart({
   data,
