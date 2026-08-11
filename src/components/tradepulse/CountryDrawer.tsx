@@ -244,7 +244,33 @@ export function CountryDrawer({
               </p>
             </div>
           )}
+          {tab === "intent" && (
+            <div role="tabpanel" id="panel-intent" aria-labelledby="tab-intent">
+              <IntentPanel fit={fit} />
+            </div>
+          )}
+          {tab === "sov" && (
+            <div role="tabpanel" id="panel-sov" aria-labelledby="tab-sov">
+              <CompetitivePanel fit={fit} />
+            </div>
+          )}
+          {tab === "localization" && (
+            <div role="tabpanel" id="panel-localization" aria-labelledby="tab-localization">
+              <LocalizationPanel fit={fit} />
+            </div>
+          )}
+          {tab === "channels" && (
+            <div role="tabpanel" id="panel-channels" aria-labelledby="tab-channels">
+              <ChannelPanel fit={fit} />
+            </div>
+          )}
+          {tab === "risk" && (
+            <div role="tabpanel" id="panel-risk" aria-labelledby="tab-risk">
+              <RiskPanel fit={fit} />
+            </div>
+          )}
         </div>
+
 
         <footer className="flex flex-wrap gap-2 border-t border-border bg-surface p-4">
           <button
