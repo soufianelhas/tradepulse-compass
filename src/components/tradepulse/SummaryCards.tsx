@@ -20,11 +20,11 @@ const toneText: Record<SummaryCardData["tone"], string> = {
   cyan: "text-cyan",
 };
 
-const PLACEHOLDERS: Pick<SummaryCardData, "id" | "label" | "icon" | "tone">[] = [
-  { id: "intent", label: "Top Search Intent Growth", icon: "trending", tone: "green" },
-  { id: "lead-time", label: "Pre-Border Inbound Lead Time", icon: "clock", tone: "cyan" },
-  { id: "supply", label: "Inbound Supply Trend", icon: "ship", tone: "rose" },
-  { id: "tariff", label: "Best Bilateral Tariff Lane", icon: "percent", tone: "amber" },
+const PLACEHOLDERS: SummaryCardData[] = [
+  { id: "intent", label: "Top Search Intent Growth", value: "", detail: "", icon: "trending", tone: "green" },
+  { id: "lead-time", label: "Pre-Border Inbound Lead Time", value: "", detail: "", icon: "clock", tone: "cyan" },
+  { id: "supply", label: "Inbound Supply Trend", value: "", detail: "", icon: "ship", tone: "rose" },
+  { id: "tariff", label: "Best Bilateral Tariff Lane", value: "", detail: "", icon: "percent", tone: "amber" },
 ];
 
 export function SummaryCards({ loading }: { loading: boolean }) {
@@ -53,7 +53,7 @@ export function SummaryCards({ loading }: { loading: boolean }) {
                 {c.label}
               </h3>
             </div>
-            {pending || !("value" in c) ? (
+            {pending ? (
               <>
                 <Skeleton className="mt-3 h-8 w-28 bg-surface-hover" />
                 <Skeleton className="mt-2 h-3 w-40 bg-surface-hover" />
