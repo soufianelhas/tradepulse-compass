@@ -195,8 +195,33 @@ export function CountryDrawer({
           </button>
         </header>
 
-        <div role="tablist" aria-label="Signal analytics tabs" className="flex overflow-x-auto border-b border-border">
-          {TABS.map((t) => (
+        <div className="flex gap-1 border-b border-border bg-canvas p-2" role="group" aria-label="Intelligence module">
+          {MODULES.map((m) => (
+            <button
+              key={m.id}
+              type="button"
+              aria-pressed={module_ === m.id}
+              onClick={() => {
+                setModule(m.id);
+                setTab(m.id === "trade" ? "demand" : "intent");
+              }}
+              className={`flex-1 rounded-md px-3 py-2 text-xs font-medium transition-colors ${
+                module_ === m.id
+                  ? "border border-border-strong bg-surface text-foreground"
+                  : "border border-transparent text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              {m.label}
+            </button>
+          ))}
+        </div>
+
+        <div
+          role="tablist"
+          aria-label={module_ === "trade" ? "Trade data analytics tabs" : "Social listening analytics tabs"}
+          className="flex overflow-x-auto border-b border-border"
+        >
+          {(module_ === "trade" ? TRADE_TABS : SOCIAL_TABS).map((t) => (
             <button
               key={t.id}
               role="tab"
@@ -214,6 +239,7 @@ export function CountryDrawer({
             </button>
           ))}
         </div>
+
 
         <div className="min-h-0 flex-1 overflow-y-auto p-4">
           {tab === "demand" && (
