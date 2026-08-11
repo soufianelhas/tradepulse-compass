@@ -7,15 +7,10 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { QUADRANT_META, signum, toneClass, type Market } from "@/lib/tradepulse-data";
+import { QUADRANT_META, signum, toneClass } from "@/lib/tradepulse-data";
+import type { Market, TableFilters } from "@/types/tradepulse";
 
-export interface TableFilters {
-  region: string;
-  maxTariff: number;
-  maxFreight: number;
-  minVelocity: number;
-  text: string;
-}
+export type { TableFilters } from "@/types/tradepulse";
 
 const REGIONS = ["All", "LATAM", "APAC", "EMEA", "NA"];
 
@@ -53,11 +48,15 @@ export function MarketTable({
   onHover,
   onSelect,
   currency,
+  error = false,
+  onRetry,
 }: {
   markets: Market[];
   filters: TableFilters;
   onFiltersChange: (f: TableFilters) => void;
   loading: boolean;
+  error?: boolean;
+  onRetry?: (() => void) | undefined;
   highlightId: string | null;
   onHover: (id: string | null) => void;
   onSelect: (m: Market) => void;
@@ -166,7 +165,24 @@ export function MarketTable({
               </tr>
             </thead>
             <tbody>
-              {loading
+              {error ? (
+                <tr>
+                  <td colSpan={7} className="px-3 py-10 text-center">
+                    <p role="alert" className="text-xs text-signal-rose">
+                      Market signal feed failed to load.
+                    </p>
+                    {onRetry && (
+                      <button
+                        type="button"
+                        onClick={onRetry}
+                        className="mt-3 inline-flex min-h-9 items-center rounded-md border border-border-strong bg-surface px-3 text-xs font-medium text-foreground transition-colors hover:border-cyan hover:text-cyan"
+                      >
+                        Retry
+                      </button>
+                    )}
+                  </td>
+                </tr>
+              ) : loading
                 ? Array.from({ length: 6 }).map((_, i) => (
                     <tr key={i} className="border-b border-border">
                       {Array.from({ length: 7 }).map((__, j) => (
@@ -217,7 +233,7 @@ export function MarketTable({
                       </tr>
                     );
                   })}
-              {!loading && markets.length === 0 && (
+              {!loading && !error && markets.length === 0 && (
                 <tr>
                   <td colSpan={7} className="px-3 py-10 text-center text-xs text-muted-foreground">
                     No destination lanes match the active filters.
