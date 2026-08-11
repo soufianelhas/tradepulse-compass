@@ -16,8 +16,8 @@ export function PanelError({
   message = "Signal feed unavailable.",
   onRetry,
 }: {
-  message?: string;
-  onRetry?: () => void;
+  message?: string | undefined;
+  onRetry?: (() => void) | undefined;
 }) {
   return (
     <div role="alert" className="rounded-md border border-border bg-canvas p-4">
