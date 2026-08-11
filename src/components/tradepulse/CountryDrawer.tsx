@@ -132,6 +132,8 @@ export function CountryDrawer({
 
   if (!market) return null;
   const breakdown = landedCostBreakdown(market);
+  const fit = getMarketFit(market);
+
 
   return (
     <div className="fixed inset-0 z-50">
