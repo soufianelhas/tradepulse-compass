@@ -53,6 +53,14 @@ export function SignalMatrix({
         </p>
       </header>
 
+      {error ? (
+        <PanelError message="Signal matrix data failed to load." onRetry={onRetry} />
+      ) : loading ? (
+        <Skeleton className="aspect-[720/460] w-full bg-surface-hover" />
+      ) : (
+        <>
+
+
       <svg
         viewBox={`0 0 ${W} ${H}`}
         className="h-auto w-full"
