@@ -324,6 +324,36 @@ export function CountryDrawer({
               <RiskPanel fit={fit} />
             </div>
           )}
+          {tab === "macro" && (
+            <div role="tabpanel" id="panel-macro" aria-labelledby="tab-macro">
+              <MacroDemandPanel fit={tradeFit} />
+            </div>
+          )}
+          {tab === "pricing" && (
+            <div role="tabpanel" id="panel-pricing" aria-labelledby="tab-pricing">
+              <PricingPanel fit={tradeFit} />
+            </div>
+          )}
+          {tab === "tariff" && (
+            <div role="tabpanel" id="panel-tariff" aria-labelledby="tab-tariff">
+              <TariffPanel fit={tradeFit} />
+            </div>
+          )}
+          {tab === "concentration" && (
+            <div role="tabpanel" id="panel-concentration" aria-labelledby="tab-concentration">
+              <SupplyConcentrationPanel fit={tradeFit} />
+            </div>
+          )}
+          {tab === "fit" && (
+            <div role="tabpanel" id="panel-fit" aria-labelledby="tab-fit">
+              <FitScorePanel fit={tradeFit} />
+            </div>
+          )}
+          {tab === "logistics" && (
+            <div role="tabpanel" id="panel-logistics" aria-labelledby="tab-logistics">
+              <LogisticsMacroPanel fit={tradeFit} />
+            </div>
+          )}
         </div>
 
 
