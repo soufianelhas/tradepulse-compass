@@ -99,7 +99,6 @@ function Index() {
           />
         </div>
 
-        </div>
       </main>
 
       {loading && <ScraperBanner onComplete={handleComplete} />}
