@@ -45,18 +45,13 @@ function Index() {
     text: "",
   });
 
-  const markets = useMemo(
-    () =>
-      MARKETS.filter(
-        (m) =>
-          (filters.region === "All" || m.region === filters.region) &&
-          m.tariffRate <= filters.maxTariff &&
-          m.freightCost <= filters.maxFreight &&
-          m.searchVelocity >= filters.minVelocity &&
-          m.country.toLowerCase().includes(filters.text.toLowerCase()),
-      ).sort((a, b) => b.searchVelocity - a.searchVelocity),
-    [filters],
-  );
+  const marketsResult = useQuery(marketsQuery(filters));
+  const markets = marketsResult.data ?? [];
+  const marketsLoading = loading || marketsResult.isPending;
+  const marketsError = marketsResult.isError;
+  const retryMarkets = useCallback(() => {
+    void marketsResult.refetch();
+  }, [marketsResult]);
 
   const handleComplete = useCallback(() => setLoading(false), []);
 
@@ -86,17 +81,24 @@ function Index() {
             highlightId={highlightId}
             onHover={setHighlightId}
             onSelect={setSelected}
+            loading={marketsLoading}
+            error={marketsError}
+            onRetry={retryMarkets}
           />
           <MarketTable
             markets={markets}
             filters={filters}
             onFiltersChange={setFilters}
-            loading={loading}
+            loading={marketsLoading}
+            error={marketsError}
+            onRetry={retryMarkets}
             highlightId={highlightId}
             onHover={setHighlightId}
             onSelect={setSelected}
             currency={currency}
           />
+        </div>
+
         </div>
       </main>
 
