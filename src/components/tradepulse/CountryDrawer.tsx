@@ -3,20 +3,34 @@ import { X, FileDown, Table2 } from "lucide-react";
 import {
   commerceSeries,
   demandSeries,
+  getMarketFit,
   landedCostBreakdown,
   signum,
   supplySeries,
   type Market,
 } from "@/lib/tradepulse-data";
+import {
+  ChannelPanel,
+  CompetitivePanel,
+  IntentPanel,
+  LocalizationPanel,
+  RiskPanel,
+} from "@/components/tradepulse/MarketFitPanels";
 
 const TABS = [
   { id: "demand", label: "Demand Signals" },
   { id: "supply", label: "Supply & Manifests" },
   { id: "commerce", label: "Local E-Commerce" },
   { id: "cost", label: "Landed Cost" },
+  { id: "intent", label: "Intent & Chatter" },
+  { id: "sov", label: "Competitive SOV" },
+  { id: "localization", label: "Localization" },
+  { id: "channels", label: "Channels & KOLs" },
+  { id: "risk", label: "Friction & Risk" },
 ] as const;
 
 type TabId = (typeof TABS)[number]["id"];
+
 
 function MiniChart({
   data,
@@ -118,6 +132,8 @@ export function CountryDrawer({
 
   if (!market) return null;
   const breakdown = landedCostBreakdown(market);
+  const fit = getMarketFit(market);
+
 
   return (
     <div className="fixed inset-0 z-50">
@@ -230,7 +246,33 @@ export function CountryDrawer({
               </p>
             </div>
           )}
+          {tab === "intent" && (
+            <div role="tabpanel" id="panel-intent" aria-labelledby="tab-intent">
+              <IntentPanel fit={fit} />
+            </div>
+          )}
+          {tab === "sov" && (
+            <div role="tabpanel" id="panel-sov" aria-labelledby="tab-sov">
+              <CompetitivePanel fit={fit} />
+            </div>
+          )}
+          {tab === "localization" && (
+            <div role="tabpanel" id="panel-localization" aria-labelledby="tab-localization">
+              <LocalizationPanel fit={fit} />
+            </div>
+          )}
+          {tab === "channels" && (
+            <div role="tabpanel" id="panel-channels" aria-labelledby="tab-channels">
+              <ChannelPanel fit={fit} />
+            </div>
+          )}
+          {tab === "risk" && (
+            <div role="tabpanel" id="panel-risk" aria-labelledby="tab-risk">
+              <RiskPanel fit={fit} />
+            </div>
+          )}
         </div>
+
 
         <footer className="flex flex-wrap gap-2 border-t border-border bg-surface p-4">
           <button
