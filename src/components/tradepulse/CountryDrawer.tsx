@@ -4,6 +4,7 @@ import {
   commerceSeries,
   demandSeries,
   getMarketFit,
+  getTradeFit,
   landedCostBreakdown,
   signum,
   supplySeries,
@@ -16,12 +17,36 @@ import {
   LocalizationPanel,
   RiskPanel,
 } from "@/components/tradepulse/MarketFitPanels";
+import {
+  FitScorePanel,
+  LogisticsMacroPanel,
+  MacroDemandPanel,
+  PricingPanel,
+  SupplyConcentrationPanel,
+  TariffPanel,
+} from "@/components/tradepulse/TradeFitPanels";
 
-const TABS = [
+const MODULES = [
+  { id: "trade", label: "Trade Data" },
+  { id: "social", label: "Social Listening" },
+] as const;
+
+type ModuleId = (typeof MODULES)[number]["id"];
+
+const TRADE_TABS = [
   { id: "demand", label: "Demand Signals" },
   { id: "supply", label: "Supply & Manifests" },
   { id: "commerce", label: "Local E-Commerce" },
   { id: "cost", label: "Landed Cost" },
+  { id: "macro", label: "Macro Demand" },
+  { id: "pricing", label: "Pricing & Margin" },
+  { id: "tariff", label: "Tariff & Access" },
+  { id: "concentration", label: "Supply Concentration" },
+  { id: "fit", label: "Demand Fit Score" },
+  { id: "logistics", label: "Logistics & Macro" },
+] as const;
+
+const SOCIAL_TABS = [
   { id: "intent", label: "Intent & Chatter" },
   { id: "sov", label: "Competitive SOV" },
   { id: "localization", label: "Localization" },
@@ -29,7 +54,8 @@ const TABS = [
   { id: "risk", label: "Friction & Risk" },
 ] as const;
 
-type TabId = (typeof TABS)[number]["id"];
+type TabId = (typeof TRADE_TABS)[number]["id"] | (typeof SOCIAL_TABS)[number]["id"];
+
 
 
 function MiniChart({
