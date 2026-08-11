@@ -1,15 +1,11 @@
 import { useEffect, useRef, useState } from "react";
+import type { ReactNode } from "react";
 import { X, FileDown, Table2 } from "lucide-react";
-import {
-  commerceSeries,
-  demandSeries,
-  getMarketFit,
-  getTradeFit,
-  landedCostBreakdown,
-  signum,
-  supplySeries,
-  type Market,
-} from "@/lib/tradepulse-data";
+import { useQuery } from "@tanstack/react-query";
+import { signum } from "@/lib/tradepulse-data";
+import type { Market } from "@/types/tradepulse";
+import { PanelError, PanelSkeleton } from "@/components/tradepulse/QueryStates";
+import { marketFitQuery, marketSeriesQuery, tradeFitQuery } from "@/services/queries";
 import {
   ChannelPanel,
   CompetitivePanel,
@@ -158,10 +154,32 @@ export function CountryDrawer({
     };
   }, [open, onClose]);
 
+  const marketId = market?.id ?? "";
+  const seriesResult = useQuery({ ...marketSeriesQuery(marketId), enabled: open });
+  const fitResult = useQuery({ ...marketFitQuery(marketId), enabled: open && module_ === "social" });
+  const tradeFitResult = useQuery({ ...tradeFitQuery(marketId), enabled: open && module_ === "trade" });
+
+  const series = seriesResult.data;
+  const fit = fitResult.data;
+  const tradeFit = tradeFitResult.data;
+
+  const renderSocial = (node: (f: NonNullable<typeof fit>) => ReactNode) => {
+    if (fitResult.isError) {
+      return <PanelError message="Social listening signals failed to load." onRetry={() => void fitResult.refetch()} />;
+    }
+    if (!fit) return <PanelSkeleton />;
+    return node(fit);
+  };
+
+  const renderTrade = (node: (f: NonNullable<typeof tradeFit>) => ReactNode) => {
+    if (tradeFitResult.isError) {
+      return <PanelError message="Trade intelligence signals failed to load." onRetry={() => void tradeFitResult.refetch()} />;
+    }
+    if (!tradeFit) return <PanelSkeleton />;
+    return node(tradeFit);
+  };
+
   if (!market) return null;
-  const breakdown = landedCostBreakdown(market);
-  const fit = getMarketFit(market);
-  const tradeFit = getTradeFit(market);
 
 
   return (
@@ -251,7 +269,13 @@ export function CountryDrawer({
                 <Stat label="30d search velocity" value={`${signum(market.searchVelocity)}%`} tone="text-signal-green" />
                 <Stat label="Social buzz index" value={`${(60 + market.searchVelocity / 3).toFixed(0)}`} />
               </div>
-              <MiniChart data={demandSeries(market)} labelA="Search velocity index" labelB="Social media buzz" />
+              {seriesResult.isError ? (
+                <PanelError message="Time series failed to load." onRetry={() => void seriesResult.refetch()} />
+              ) : series ? (
+                <MiniChart data={series.demand} labelA="Search velocity index" labelB="Social media buzz" />
+              ) : (
+                <PanelSkeleton rows={2} />
+              )}
             </div>
           )}
           {tab === "supply" && (
@@ -260,7 +284,13 @@ export function CountryDrawer({
                 <Stat label="60d inbound TEU volume" value={`${signum(market.teuVolume)}%`} />
                 <Stat label="Spot ocean freight" value={`$${market.freightCost.toLocaleString()}/TEU`} />
               </div>
-              <MiniChart data={supplySeries(market)} labelA="Weekly B/L TEU volume" labelB="Spot freight rate ($)" />
+              {seriesResult.isError ? (
+                <PanelError message="Time series failed to load." onRetry={() => void seriesResult.refetch()} />
+              ) : series ? (
+                <MiniChart data={series.supply} labelA="Weekly B/L TEU volume" labelB="Spot freight rate ($)" />
+              ) : (
+                <PanelSkeleton rows={2} />
+              )}
             </div>
           )}
           {tab === "commerce" && (
@@ -270,32 +300,45 @@ export function CountryDrawer({
                 <Stat label="Active competitor listings" value={`${Math.round(120 + market.teuVolume * 4)}`} />
                 <Stat label="Local price inflation" value={`${(market.stockoutRate / 6).toFixed(1)}%`} />
               </div>
-              <MiniChart data={commerceSeries(market)} labelA="Out-of-stock rate (%)" labelB="Competitor listings" />
+              {seriesResult.isError ? (
+                <PanelError message="Time series failed to load." onRetry={() => void seriesResult.refetch()} />
+              ) : series ? (
+                <MiniChart data={series.commerce} labelA="Out-of-stock rate (%)" labelB="Competitor listings" />
+              ) : (
+                <PanelSkeleton rows={2} />
+              )}
             </div>
           )}
           {tab === "cost" && (
             <div role="tabpanel" id="panel-cost" aria-labelledby="tab-cost" className="space-y-3">
-              <table className="w-full text-sm">
-                <caption className="sr-only">Landed cost breakdown per unit</caption>
-                <tbody>
-                  {breakdown.map((b) => (
-                    <tr key={b.label} className="border-b border-border">
-                      <th scope="row" className="py-2.5 text-left font-normal text-muted-foreground">
-                        {b.label}
+              {seriesResult.isError ? (
+                <PanelError message="Landed cost breakdown failed to load." onRetry={() => void seriesResult.refetch()} />
+              ) : !series ? (
+                <PanelSkeleton rows={3} />
+              ) : (
+                <table className="w-full text-sm">
+                  <caption className="sr-only">Landed cost breakdown per unit</caption>
+                  <tbody>
+                    {series.landedCost.map((b) => (
+                      <tr key={b.label} className="border-b border-border">
+                        <th scope="row" className="py-2.5 text-left font-normal text-muted-foreground">
+                          {b.label}
+                        </th>
+                        <td className="num py-2.5 text-right text-foreground">${b.value.toFixed(2)}</td>
+                      </tr>
+                    ))}
+                    <tr>
+                      <th scope="row" className="py-2.5 text-left font-medium">
+                        Total landed cost
                       </th>
-                      <td className="num py-2.5 text-right text-foreground">${b.value.toFixed(2)}</td>
+                      <td className="num py-2.5 text-right text-lg font-semibold text-cyan">
+                        ${market.landedCost.toFixed(2)}
+                      </td>
                     </tr>
-                  ))}
-                  <tr>
-                    <th scope="row" className="py-2.5 text-left font-medium">
-                      Total landed cost
-                    </th>
-                    <td className="num py-2.5 text-right text-lg font-semibold text-cyan">
-                      ${market.landedCost.toFixed(2)}
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
+                  </tbody>
+                </table>
+              )}
+
               <p className="text-[11px] text-muted-foreground">
                 MFN baseline vs preferential rate applied where a valid FTA claim exists on this lane.
               </p>
@@ -303,57 +346,57 @@ export function CountryDrawer({
           )}
           {tab === "intent" && (
             <div role="tabpanel" id="panel-intent" aria-labelledby="tab-intent">
-              <IntentPanel fit={fit} />
+              {renderSocial((f) => <IntentPanel fit={f} />)}
             </div>
           )}
           {tab === "sov" && (
             <div role="tabpanel" id="panel-sov" aria-labelledby="tab-sov">
-              <CompetitivePanel fit={fit} />
+              {renderSocial((f) => <CompetitivePanel fit={f} />)}
             </div>
           )}
           {tab === "localization" && (
             <div role="tabpanel" id="panel-localization" aria-labelledby="tab-localization">
-              <LocalizationPanel fit={fit} />
+              {renderSocial((f) => <LocalizationPanel fit={f} />)}
             </div>
           )}
           {tab === "channels" && (
             <div role="tabpanel" id="panel-channels" aria-labelledby="tab-channels">
-              <ChannelPanel fit={fit} />
+              {renderSocial((f) => <ChannelPanel fit={f} />)}
             </div>
           )}
           {tab === "risk" && (
             <div role="tabpanel" id="panel-risk" aria-labelledby="tab-risk">
-              <RiskPanel fit={fit} />
+              {renderSocial((f) => <RiskPanel fit={f} />)}
             </div>
           )}
           {tab === "macro" && (
             <div role="tabpanel" id="panel-macro" aria-labelledby="tab-macro">
-              <MacroDemandPanel fit={tradeFit} />
+              {renderTrade((f) => <MacroDemandPanel fit={f} />)}
             </div>
           )}
           {tab === "pricing" && (
             <div role="tabpanel" id="panel-pricing" aria-labelledby="tab-pricing">
-              <PricingPanel fit={tradeFit} />
+              {renderTrade((f) => <PricingPanel fit={f} />)}
             </div>
           )}
           {tab === "tariff" && (
             <div role="tabpanel" id="panel-tariff" aria-labelledby="tab-tariff">
-              <TariffPanel fit={tradeFit} />
+              {renderTrade((f) => <TariffPanel fit={f} />)}
             </div>
           )}
           {tab === "concentration" && (
             <div role="tabpanel" id="panel-concentration" aria-labelledby="tab-concentration">
-              <SupplyConcentrationPanel fit={tradeFit} />
+              {renderTrade((f) => <SupplyConcentrationPanel fit={f} />)}
             </div>
           )}
           {tab === "fit" && (
             <div role="tabpanel" id="panel-fit" aria-labelledby="tab-fit">
-              <FitScorePanel fit={tradeFit} />
+              {renderTrade((f) => <FitScorePanel fit={f} />)}
             </div>
           )}
           {tab === "logistics" && (
             <div role="tabpanel" id="panel-logistics" aria-labelledby="tab-logistics">
-              <LogisticsMacroPanel fit={tradeFit} />
+              {renderTrade((f) => <LogisticsMacroPanel fit={f} />)}
             </div>
           )}
         </div>

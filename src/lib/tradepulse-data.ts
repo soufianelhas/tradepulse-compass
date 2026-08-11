@@ -1,21 +1,29 @@
-export type Quadrant = "unmet" | "competitive" | "glut" | "dormant";
+import type {
+  ExportMarketFit,
+  LandedCostLine,
+  Market,
+  Quadrant,
+  SeriesPoint,
+  Tone,
+  TradeDataMarketFit,
+} from "@/types/tradepulse";
 
-export interface Market {
-  id: string;
-  country: string;
-  flag: string;
-  region: "LATAM" | "APAC" | "EMEA" | "NA";
-  searchVelocity: number; // 30d %
-  teuVolume: number; // 60d %
-  stockoutRate: number; // %
-  tariffRate: number; // %
-  landedCost: number; // $/unit
-  freightCost: number; // $/TEU spot
-  quadrant: Quadrant;
-  note: string;
-}
+export type {
+  ExportMarketFit,
+  LandedCostLine,
+  Market,
+  MarketSeriesBundle,
+  Quadrant,
+  Region,
+  SeriesPoint,
+  SummaryCardData,
+  TableFilters,
+  Tone,
+  TradeDataMarketFit,
+} from "@/types/tradepulse";
 
 export const MARKETS: Market[] = [
+
   {
     id: "mx",
     country: "Mexico",
@@ -158,14 +166,14 @@ export const MARKETS: Market[] = [
   },
 ];
 
-export const QUADRANT_META: Record<Quadrant, { label: string; tone: "green" | "amber" | "rose" | "muted" }> = {
+export const QUADRANT_META: Record<Quadrant, { label: string; tone: Tone }> = {
   unmet: { label: "Unmet Demand", tone: "green" },
   competitive: { label: "Competitive Growth", tone: "amber" },
   glut: { label: "Over-Supply Risk", tone: "rose" },
   dormant: { label: "Dormant Lane", tone: "muted" },
 };
 
-export const toneClass = (tone: "green" | "amber" | "rose" | "muted") =>
+export const toneClass = (tone: Tone) =>
   tone === "green"
     ? "signal-green"
     : tone === "amber"
@@ -175,12 +183,6 @@ export const toneClass = (tone: "green" | "amber" | "rose" | "muted") =>
         : "border border-border bg-surface-hover text-muted-foreground";
 
 export const signum = (n: number) => (n > 0 ? `+${n.toFixed(1)}` : n.toFixed(1));
-
-export interface SeriesPoint {
-  week: string;
-  a: number;
-  b: number;
-}
 
 export function demandSeries(m: Market): SeriesPoint[] {
   return Array.from({ length: 12 }, (_, i) => ({
@@ -206,7 +208,7 @@ export function commerceSeries(m: Market): SeriesPoint[] {
   }));
 }
 
-export function landedCostBreakdown(m: Market) {
+export function landedCostBreakdown(m: Market): LandedCostLine[] {
   const goods = m.landedCost * 0.52;
   const freight = m.landedCost * 0.21;
   const tariff = m.landedCost * (m.tariffRate / 100) * 0.9;
@@ -224,56 +226,6 @@ export function landedCostBreakdown(m: Market) {
 /* ---------------------------------------------------------------------------
  * Export Market Demand Fit — social listening & localized intelligence layer
  * ------------------------------------------------------------------------- */
-
-export interface ExportMarketFit {
-  // 1. Demand & Purchase Intent Signals
-  demandSignals: {
-    categoryVolume: string;
-    growthVelocityMom: number;
-    explicitIntentPhrases: { phrase: string; count: number; growth: string }[];
-    crossBorderChatterVolume: string;
-    unmetNeedClusters: { topic: string; sentimentRatio: number; complaintShare: string }[];
-  };
-
-  // 2. Competitive & SOV Benchmarking
-  competitiveBenchmark: {
-    localVsImportedSOV: { localShare: number; importShare: number };
-    netSentimentGap: { brandSentiment: number; incumbentSentiment: number };
-    featurePreferenceMatrix: {
-      attribute: string;
-      importanceScore: number;
-      sentiment: "positive" | "neutral" | "negative";
-    }[];
-    priceSensitivityChatter: { category: string; intensityScore: number };
-  };
-
-  // 3. Localization & Cultural Context
-  localizationContext: {
-    geoLinguisticSentiment: { dialectRegion: string; sentimentScore: number; topIdioms: string[] }[];
-    usageContexts: { occasion: string; frequencyShare: number }[];
-    culturalAttributeSentiment: { attribute: string; status: "compliant" | "friction"; details: string }[];
-    seasonalSpikes: { eventName: string; month: string; volumeMultiplier: string }[];
-  };
-
-  // 4. Local Channel & Community Mapping
-  channelMapping: {
-    platformDistribution: { platform: string; sharePercentage: number }[];
-    topKOLs: { name: string; handle: string; platform: string; engagementRate: string; reach: string }[];
-    eCommerceReviewSentiment: {
-      marketplace: string;
-      averageRating: number;
-      positiveAspects: string[];
-      negativeAspects: string[];
-    }[];
-  };
-
-  // 5. Market Friction & Operational Risks
-  operationalRisks: {
-    customsChatterSpikes: { issue: string; severity: "low" | "medium" | "high"; trend: string }[];
-    logisticsComplaintsShare: number;
-    counterfeitMentionsShare: number;
-  };
-}
 
 interface FitFlavour {
   platforms: { platform: string; sharePercentage: number }[];
@@ -504,61 +456,6 @@ export function getMarketFit(m: Market): ExportMarketFit {
  * MODULE 2 — Trade Data Market Fit (raw trade intelligence, 6 layers)
  * Kept fully separate from the social-listening ExportMarketFit layer.
  * ------------------------------------------------------------------ */
-
-export interface TradeDataMarketFit {
-  macroDemand: {
-    hsCode6: string;
-    nationalTariffLine: string;
-    annualImportValueUsd: number;
-    annualImportQuantity: { value: number; unit: "metric_tons" | "units" | "kg" };
-    cagr3To5Yr: number;
-    yoyGrowth: number;
-    seasonalityMonths: { month: string; importSharePercent: number }[];
-  };
-  commercialPricing: {
-    averageUnitValueUsd: number;
-    unitValueSegment: "premium" | "mid-tier" | "economy";
-    multiYearPriceTrend: { year: number; unitPriceUsd: number }[];
-    landedCostBreakdownUsd: {
-      fobPrice: number;
-      estimatedFreightInsurance: number;
-      appliedDutyCost: number;
-      effectiveLandedPrice: number;
-    };
-  };
-  tariffAndRegulatory: {
-    mfnTariffRatePercent: number;
-    preferentialFtaRatePercent: number | null;
-    activeFtaName: string | null;
-    nonTariffMeasures: {
-      type: "SPS" | "TBT" | "Pre-Shipment" | "Labeling";
-      title: string;
-      mandatoryCertifications: string[];
-    }[];
-    tradeBarriers: {
-      type: "Anti-Dumping" | "Quota" | "Embargo";
-      description: string;
-      impactLevel: "low" | "medium" | "high";
-    }[];
-  };
-  supplyConcentration: {
-    supplyingCountriesBreakdown: { country: string; flag: string; marketSharePercent: number }[];
-    hhiIndexScore: number;
-    hhiMarketType: "Diversified" | "Moderately Concentrated" | "Highly Concentrated";
-    shipmentRecords: { activeBuyerCount: number; activeSupplierCount: number; annualTeuVolume: number };
-  };
-  algorithmicFitScores: {
-    tradeComplementarityScore: number;
-    marketAttractivenessIndex: number;
-    competitiveDistanceUsd: number;
-  };
-  logisticsAndMacro: {
-    averageTransitDays: number;
-    spotFreightRatePerTeuUsd: number;
-    currencyVolatilityIndex: { currencyCode: string; changeYoYPercent: number; stability: "Stable" | "Moderate" | "Volatile" };
-    geopoliticalSovereignRisk: { creditRating: string; easeOfImportRank: number };
-  };
-}
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 

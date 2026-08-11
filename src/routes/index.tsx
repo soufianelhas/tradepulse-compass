@@ -1,13 +1,16 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { AppHeader } from "@/components/tradepulse/AppHeader";
 import { SemanticBar } from "@/components/tradepulse/SemanticBar";
 import { ScraperBanner } from "@/components/tradepulse/ScraperBanner";
 import { SummaryCards } from "@/components/tradepulse/SummaryCards";
 import { SignalMatrix } from "@/components/tradepulse/SignalMatrix";
-import { MarketTable, type TableFilters } from "@/components/tradepulse/MarketTable";
+import { MarketTable } from "@/components/tradepulse/MarketTable";
 import { CountryDrawer } from "@/components/tradepulse/CountryDrawer";
-import { MARKETS, type Market } from "@/lib/tradepulse-data";
+import { marketsQuery } from "@/services/queries";
+import type { Market, TableFilters } from "@/types/tradepulse";
+
 
 const TITLE = "TradePulse AI — Predictive Trade Demand & Manifest Signals";
 const DESCRIPTION =
@@ -42,18 +45,13 @@ function Index() {
     text: "",
   });
 
-  const markets = useMemo(
-    () =>
-      MARKETS.filter(
-        (m) =>
-          (filters.region === "All" || m.region === filters.region) &&
-          m.tariffRate <= filters.maxTariff &&
-          m.freightCost <= filters.maxFreight &&
-          m.searchVelocity >= filters.minVelocity &&
-          m.country.toLowerCase().includes(filters.text.toLowerCase()),
-      ).sort((a, b) => b.searchVelocity - a.searchVelocity),
-    [filters],
-  );
+  const marketsResult = useQuery(marketsQuery(filters));
+  const markets = marketsResult.data ?? [];
+  const marketsLoading = loading || marketsResult.isPending;
+  const marketsError = marketsResult.isError;
+  const retryMarkets = useCallback(() => {
+    void marketsResult.refetch();
+  }, [marketsResult]);
 
   const handleComplete = useCallback(() => setLoading(false), []);
 
@@ -83,18 +81,24 @@ function Index() {
             highlightId={highlightId}
             onHover={setHighlightId}
             onSelect={setSelected}
+            loading={marketsLoading}
+            error={marketsError}
+            onRetry={retryMarkets}
           />
           <MarketTable
             markets={markets}
             filters={filters}
             onFiltersChange={setFilters}
-            loading={loading}
+            loading={marketsLoading}
+            error={marketsError}
+            onRetry={retryMarkets}
             highlightId={highlightId}
             onHover={setHighlightId}
             onSelect={setSelected}
             currency={currency}
           />
         </div>
+
       </main>
 
       {loading && <ScraperBanner onComplete={handleComplete} />}
