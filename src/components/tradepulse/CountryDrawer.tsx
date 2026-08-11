@@ -310,27 +310,34 @@ export function CountryDrawer({
           )}
           {tab === "cost" && (
             <div role="tabpanel" id="panel-cost" aria-labelledby="tab-cost" className="space-y-3">
-              <table className="w-full text-sm">
-                <caption className="sr-only">Landed cost breakdown per unit</caption>
-                <tbody>
-                  {breakdown.map((b) => (
-                    <tr key={b.label} className="border-b border-border">
-                      <th scope="row" className="py-2.5 text-left font-normal text-muted-foreground">
-                        {b.label}
+              {seriesResult.isError ? (
+                <PanelError message="Landed cost breakdown failed to load." onRetry={() => void seriesResult.refetch()} />
+              ) : !series ? (
+                <PanelSkeleton rows={3} />
+              ) : (
+                <table className="w-full text-sm">
+                  <caption className="sr-only">Landed cost breakdown per unit</caption>
+                  <tbody>
+                    {series.landedCost.map((b) => (
+                      <tr key={b.label} className="border-b border-border">
+                        <th scope="row" className="py-2.5 text-left font-normal text-muted-foreground">
+                          {b.label}
+                        </th>
+                        <td className="num py-2.5 text-right text-foreground">${b.value.toFixed(2)}</td>
+                      </tr>
+                    ))}
+                    <tr>
+                      <th scope="row" className="py-2.5 text-left font-medium">
+                        Total landed cost
                       </th>
-                      <td className="num py-2.5 text-right text-foreground">${b.value.toFixed(2)}</td>
+                      <td className="num py-2.5 text-right text-lg font-semibold text-cyan">
+                        ${market.landedCost.toFixed(2)}
+                      </td>
                     </tr>
-                  ))}
-                  <tr>
-                    <th scope="row" className="py-2.5 text-left font-medium">
-                      Total landed cost
-                    </th>
-                    <td className="num py-2.5 text-right text-lg font-semibold text-cyan">
-                      ${market.landedCost.toFixed(2)}
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
+                  </tbody>
+                </table>
+              )}
+
               <p className="text-[11px] text-muted-foreground">
                 MFN baseline vs preferential rate applied where a valid FTA claim exists on this lane.
               </p>
