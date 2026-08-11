@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import type { ReactNode } from "react";
 import { X, FileDown, Table2 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { signum } from "@/lib/tradepulse-data";
@@ -162,7 +163,7 @@ export function CountryDrawer({
   const fit = fitResult.data;
   const tradeFit = tradeFitResult.data;
 
-  const renderSocial = (node: (f: NonNullable<typeof fit>) => JSX.Element) => {
+  const renderSocial = (node: (f: NonNullable<typeof fit>) => ReactNode) => {
     if (fitResult.isError) {
       return <PanelError message="Social listening signals failed to load." onRetry={() => void fitResult.refetch()} />;
     }
@@ -170,7 +171,7 @@ export function CountryDrawer({
     return node(fit);
   };
 
-  const renderTrade = (node: (f: NonNullable<typeof tradeFit>) => JSX.Element) => {
+  const renderTrade = (node: (f: NonNullable<typeof tradeFit>) => ReactNode) => {
     if (tradeFitResult.isError) {
       return <PanelError message="Trade intelligence signals failed to load." onRetry={() => void tradeFitResult.refetch()} />;
     }
