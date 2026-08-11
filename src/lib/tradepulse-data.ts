@@ -166,14 +166,14 @@ export const MARKETS: Market[] = [
   },
 ];
 
-export const QUADRANT_META: Record<Quadrant, { label: string; tone: "green" | "amber" | "rose" | "muted" }> = {
+export const QUADRANT_META: Record<Quadrant, { label: string; tone: Tone }> = {
   unmet: { label: "Unmet Demand", tone: "green" },
   competitive: { label: "Competitive Growth", tone: "amber" },
   glut: { label: "Over-Supply Risk", tone: "rose" },
   dormant: { label: "Dormant Lane", tone: "muted" },
 };
 
-export const toneClass = (tone: "green" | "amber" | "rose" | "muted") =>
+export const toneClass = (tone: Tone) =>
   tone === "green"
     ? "signal-green"
     : tone === "amber"
@@ -208,7 +208,7 @@ export function commerceSeries(m: Market): SeriesPoint[] {
   }));
 }
 
-export function landedCostBreakdown(m: Market) {
+export function landedCostBreakdown(m: Market): LandedCostLine[] {
   const goods = m.landedCost * 0.52;
   const freight = m.landedCost * 0.21;
   const tariff = m.landedCost * (m.tariffRate / 100) * 0.9;
