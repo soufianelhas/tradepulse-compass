@@ -199,6 +199,9 @@ export function SignalMatrix({
           </dl>
         </div>
       )}
+        </>
+      )}
     </section>
+
   );
 }
