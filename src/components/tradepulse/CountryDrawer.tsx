@@ -123,6 +123,7 @@ export function CountryDrawer({
 
   useEffect(() => {
     if (!open) return undefined;
+    setModule("trade");
     setTab("demand");
     const prev = document.activeElement as HTMLElement | null;
     panelRef.current?.querySelector<HTMLElement>("button")?.focus();
