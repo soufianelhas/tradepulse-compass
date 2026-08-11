@@ -116,6 +116,7 @@ export function CountryDrawer({
   currency: string;
   onClose: () => void;
 }) {
+  const [module_, setModule] = useState<ModuleId>("trade");
   const [tab, setTab] = useState<TabId>("demand");
   const panelRef = useRef<HTMLDivElement>(null);
   const open = market !== null;
