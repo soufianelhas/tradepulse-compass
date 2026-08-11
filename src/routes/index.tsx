@@ -1,13 +1,16 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { AppHeader } from "@/components/tradepulse/AppHeader";
 import { SemanticBar } from "@/components/tradepulse/SemanticBar";
 import { ScraperBanner } from "@/components/tradepulse/ScraperBanner";
 import { SummaryCards } from "@/components/tradepulse/SummaryCards";
 import { SignalMatrix } from "@/components/tradepulse/SignalMatrix";
-import { MarketTable, type TableFilters } from "@/components/tradepulse/MarketTable";
+import { MarketTable } from "@/components/tradepulse/MarketTable";
 import { CountryDrawer } from "@/components/tradepulse/CountryDrawer";
-import { MARKETS, type Market } from "@/lib/tradepulse-data";
+import { marketsQuery } from "@/services/queries";
+import type { Market, TableFilters } from "@/types/tradepulse";
+
 
 const TITLE = "TradePulse AI — Predictive Trade Demand & Manifest Signals";
 const DESCRIPTION =
