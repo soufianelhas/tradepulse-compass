@@ -160,6 +160,7 @@ export function CountryDrawer({
   if (!market) return null;
   const breakdown = landedCostBreakdown(market);
   const fit = getMarketFit(market);
+  const tradeFit = getTradeFit(market);
 
 
   return (
