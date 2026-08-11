@@ -1,21 +1,29 @@
-export type Quadrant = "unmet" | "competitive" | "glut" | "dormant";
+import type {
+  ExportMarketFit,
+  LandedCostLine,
+  Market,
+  Quadrant,
+  SeriesPoint,
+  Tone,
+  TradeDataMarketFit,
+} from "@/types/tradepulse";
 
-export interface Market {
-  id: string;
-  country: string;
-  flag: string;
-  region: "LATAM" | "APAC" | "EMEA" | "NA";
-  searchVelocity: number; // 30d %
-  teuVolume: number; // 60d %
-  stockoutRate: number; // %
-  tariffRate: number; // %
-  landedCost: number; // $/unit
-  freightCost: number; // $/TEU spot
-  quadrant: Quadrant;
-  note: string;
-}
+export type {
+  ExportMarketFit,
+  LandedCostLine,
+  Market,
+  MarketSeriesBundle,
+  Quadrant,
+  Region,
+  SeriesPoint,
+  SummaryCardData,
+  TableFilters,
+  Tone,
+  TradeDataMarketFit,
+} from "@/types/tradepulse";
 
 export const MARKETS: Market[] = [
+
   {
     id: "mx",
     country: "Mexico",
