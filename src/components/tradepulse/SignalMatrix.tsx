@@ -1,5 +1,8 @@
 import { useMemo, useState } from "react";
-import { MARKETS, signum, type Market } from "@/lib/tradepulse-data";
+import { Skeleton } from "@/components/ui/skeleton";
+import { PanelError } from "@/components/tradepulse/QueryStates";
+import { signum } from "@/lib/tradepulse-data";
+import type { Market } from "@/types/tradepulse";
 
 const W = 720;
 const H = 460;
@@ -10,17 +13,23 @@ export function SignalMatrix({
   highlightId,
   onHover,
   onSelect,
+  loading = false,
+  error = false,
+  onRetry,
 }: {
   markets: Market[];
   highlightId: string | null;
   onHover: (id: string | null) => void;
   onSelect: (m: Market) => void;
+  loading?: boolean;
+  error?: boolean;
+  onRetry?: () => void;
 }) {
   const [tip, setTip] = useState<{ m: Market; x: number; y: number } | null>(null);
 
   const scale = useMemo(() => {
-    const xs = MARKETS.map((m) => m.teuVolume);
-    const ys = MARKETS.map((m) => m.searchVelocity);
+    const xs = markets.length ? markets.map((m) => m.teuVolume) : [-10, 10];
+    const ys = markets.length ? markets.map((m) => m.searchVelocity) : [-20, 20];
     const xMin = Math.min(...xs) - 8;
     const xMax = Math.max(...xs) + 8;
     const yMin = Math.min(...ys) - 15;
@@ -29,10 +38,11 @@ export function SignalMatrix({
       x: (v: number) => PAD.left + ((v - xMin) / (xMax - xMin)) * (W - PAD.left - PAD.right),
       y: (v: number) => H - PAD.bottom - ((v - yMin) / (yMax - yMin)) * (H - PAD.top - PAD.bottom),
     };
-  }, []);
+  }, [markets]);
 
   const x0 = scale.x(0);
   const y0 = scale.y(0);
+
 
   return (
     <section className="panel relative flex min-w-0 flex-col p-4" aria-label="Bivariate signal matrix">
