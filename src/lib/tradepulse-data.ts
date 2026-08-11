@@ -499,3 +499,275 @@ export function getMarketFit(m: Market): ExportMarketFit {
     },
   };
 }
+
+/* ------------------------------------------------------------------ *
+ * MODULE 2 — Trade Data Market Fit (raw trade intelligence, 6 layers)
+ * Kept fully separate from the social-listening ExportMarketFit layer.
+ * ------------------------------------------------------------------ */
+
+export interface TradeDataMarketFit {
+  macroDemand: {
+    hsCode6: string;
+    nationalTariffLine: string;
+    annualImportValueUsd: number;
+    annualImportQuantity: { value: number; unit: "metric_tons" | "units" | "kg" };
+    cagr3To5Yr: number;
+    yoyGrowth: number;
+    seasonalityMonths: { month: string; importSharePercent: number }[];
+  };
+  commercialPricing: {
+    averageUnitValueUsd: number;
+    unitValueSegment: "premium" | "mid-tier" | "economy";
+    multiYearPriceTrend: { year: number; unitPriceUsd: number }[];
+    landedCostBreakdownUsd: {
+      fobPrice: number;
+      estimatedFreightInsurance: number;
+      appliedDutyCost: number;
+      effectiveLandedPrice: number;
+    };
+  };
+  tariffAndRegulatory: {
+    mfnTariffRatePercent: number;
+    preferentialFtaRatePercent: number | null;
+    activeFtaName: string | null;
+    nonTariffMeasures: {
+      type: "SPS" | "TBT" | "Pre-Shipment" | "Labeling";
+      title: string;
+      mandatoryCertifications: string[];
+    }[];
+    tradeBarriers: {
+      type: "Anti-Dumping" | "Quota" | "Embargo";
+      description: string;
+      impactLevel: "low" | "medium" | "high";
+    }[];
+  };
+  supplyConcentration: {
+    supplyingCountriesBreakdown: { country: string; flag: string; marketSharePercent: number }[];
+    hhiIndexScore: number;
+    hhiMarketType: "Diversified" | "Moderately Concentrated" | "Highly Concentrated";
+    shipmentRecords: { activeBuyerCount: number; activeSupplierCount: number; annualTeuVolume: number };
+  };
+  algorithmicFitScores: {
+    tradeComplementarityScore: number;
+    marketAttractivenessIndex: number;
+    competitiveDistanceUsd: number;
+  };
+  logisticsAndMacro: {
+    averageTransitDays: number;
+    spotFreightRatePerTeuUsd: number;
+    currencyVolatilityIndex: { currencyCode: string; changeYoYPercent: number; stability: "Stable" | "Moderate" | "Volatile" };
+    geopoliticalSovereignRisk: { creditRating: string; easeOfImportRank: number };
+  };
+}
+
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+const TRADE_PROFILE: Record<
+  string,
+  {
+    tariffLineSuffix: string;
+    fta: string | null;
+    ftaRate: number | null;
+    currency: { currencyCode: string; changeYoYPercent: number; stability: "Stable" | "Moderate" | "Volatile" };
+    risk: { creditRating: string; easeOfImportRank: number };
+    transitDays: number;
+    suppliers: { country: string; flag: string; marketSharePercent: number }[];
+  }
+> = {
+  mx: {
+    tariffLineSuffix: "5090",
+    fta: "USMCA",
+    ftaRate: 0,
+    currency: { currencyCode: "MXN", changeYoYPercent: -3.4, stability: "Moderate" },
+    risk: { creditRating: "BBB", easeOfImportRank: 61 },
+    transitDays: 26,
+    suppliers: [
+      { country: "China", flag: "🇨🇳", marketSharePercent: 48 },
+      { country: "United States", flag: "🇺🇸", marketSharePercent: 27 },
+      { country: "Vietnam", flag: "🇻🇳", marketSharePercent: 11 },
+      { country: "Germany", flag: "🇩🇪", marketSharePercent: 8 },
+      { country: "Others", flag: "🌐", marketSharePercent: 6 },
+    ],
+  },
+  br: {
+    tariffLineSuffix: "0000",
+    fta: "Mercosur",
+    ftaRate: 12,
+    currency: { currencyCode: "BRL", changeYoYPercent: -8.1, stability: "Volatile" },
+    risk: { creditRating: "BB", easeOfImportRank: 108 },
+    transitDays: 38,
+    suppliers: [
+      { country: "China", flag: "🇨🇳", marketSharePercent: 56 },
+      { country: "Argentina", flag: "🇦🇷", marketSharePercent: 14 },
+      { country: "United States", flag: "🇺🇸", marketSharePercent: 12 },
+      { country: "Others", flag: "🌐", marketSharePercent: 18 },
+    ],
+  },
+  ae: {
+    tariffLineSuffix: "0010",
+    fta: "GCC Common Tariff",
+    ftaRate: 0,
+    currency: { currencyCode: "AED", changeYoYPercent: 0.1, stability: "Stable" },
+    risk: { creditRating: "AA-", easeOfImportRank: 16 },
+    transitDays: 21,
+    suppliers: [
+      { country: "China", flag: "🇨🇳", marketSharePercent: 44 },
+      { country: "India", flag: "🇮🇳", marketSharePercent: 19 },
+      { country: "Turkey", flag: "🇹🇷", marketSharePercent: 13 },
+      { country: "Others", flag: "🌐", marketSharePercent: 24 },
+    ],
+  },
+  vn: {
+    tariffLineSuffix: "9000",
+    fta: "CPTPP",
+    ftaRate: 0,
+    currency: { currencyCode: "VND", changeYoYPercent: -2.2, stability: "Moderate" },
+    risk: { creditRating: "BB+", easeOfImportRank: 74 },
+    transitDays: 12,
+    suppliers: [
+      { country: "China", flag: "🇨🇳", marketSharePercent: 62 },
+      { country: "South Korea", flag: "🇰🇷", marketSharePercent: 15 },
+      { country: "Japan", flag: "🇯🇵", marketSharePercent: 9 },
+      { country: "Others", flag: "🌐", marketSharePercent: 14 },
+    ],
+  },
+  de: {
+    tariffLineSuffix: "0080",
+    fta: "EU Common Customs Tariff",
+    ftaRate: 2.7,
+    currency: { currencyCode: "EUR", changeYoYPercent: 1.4, stability: "Stable" },
+    risk: { creditRating: "AAA", easeOfImportRank: 8 },
+    transitDays: 34,
+    suppliers: [
+      { country: "China", flag: "🇨🇳", marketSharePercent: 39 },
+      { country: "Poland", flag: "🇵🇱", marketSharePercent: 17 },
+      { country: "Netherlands", flag: "🇳🇱", marketSharePercent: 12 },
+      { country: "Others", flag: "🌐", marketSharePercent: 32 },
+    ],
+  },
+  us: {
+    tariffLineSuffix: "5090",
+    fta: null,
+    ftaRate: null,
+    currency: { currencyCode: "USD", changeYoYPercent: 0, stability: "Stable" },
+    risk: { creditRating: "AA+", easeOfImportRank: 5 },
+    transitDays: 30,
+    suppliers: [
+      { country: "China", flag: "🇨🇳", marketSharePercent: 51 },
+      { country: "Mexico", flag: "🇲🇽", marketSharePercent: 21 },
+      { country: "Vietnam", flag: "🇻🇳", marketSharePercent: 13 },
+      { country: "Others", flag: "🌐", marketSharePercent: 15 },
+    ],
+  },
+};
+
+const DEFAULT_SUPPLIERS = [
+  { country: "China", flag: "🇨🇳", marketSharePercent: 46 },
+  { country: "Germany", flag: "🇩🇪", marketSharePercent: 16 },
+  { country: "United States", flag: "🇺🇸", marketSharePercent: 12 },
+  { country: "Turkey", flag: "🇹🇷", marketSharePercent: 9 },
+  { country: "Others", flag: "🌐", marketSharePercent: 17 },
+];
+
+const seasonalShape = [6.4, 5.9, 7.1, 7.8, 8.4, 8.9, 9.6, 9.2, 8.7, 9.8, 10.4, 7.8];
+
+export function getTradeFit(m: Market): TradeDataMarketFit {
+  const p = TRADE_PROFILE[m.id];
+  const suppliers = p?.suppliers ?? DEFAULT_SUPPLIERS;
+  const hhi = Math.round(suppliers.reduce((acc, s) => acc + s.marketSharePercent ** 2, 0));
+  const hhiMarketType: TradeDataMarketFit["supplyConcentration"]["hhiMarketType"] =
+    hhi > 2500 ? "Highly Concentrated" : hhi > 1500 ? "Moderately Concentrated" : "Diversified";
+
+  const unitValue = round1(m.landedCost * 1.62);
+  const fob = round1(m.landedCost * 0.68);
+  const freightIns = round1(m.freightCost / 240 + 3.4);
+  const duty = round1((fob * m.tariffRate) / 100);
+  const importValue = Math.round((28_000_000 + m.teuVolume * 640_000 + m.searchVelocity * 210_000) / 1000) * 1000;
+
+  return {
+    macroDemand: {
+      hsCode6: "8716.80",
+      nationalTariffLine: `8716.80.${p?.tariffLineSuffix ?? "0000"}`,
+      annualImportValueUsd: Math.max(4_000_000, importValue),
+      annualImportQuantity: { value: Math.round(Math.max(4_000_000, importValue) / unitValue), unit: "units" },
+      cagr3To5Yr: round1(4.8 + m.searchVelocity / 14),
+      yoyGrowth: round1(m.teuVolume + m.searchVelocity / 6),
+      seasonalityMonths: MONTHS.map((month, i) => ({
+        month,
+        importSharePercent: round1(seasonalShape[i]! + (i === 10 ? m.stockoutRate / 40 : 0)),
+      })),
+    },
+    commercialPricing: {
+      averageUnitValueUsd: unitValue,
+      unitValueSegment: unitValue > 170 ? "premium" : unitValue > 95 ? "mid-tier" : "economy",
+      multiYearPriceTrend: [2021, 2022, 2023, 2024, 2025].map((year, i) => ({
+        year,
+        unitPriceUsd: round1(unitValue * (0.84 + i * 0.04) + (i === 1 ? 4.2 : 0)),
+      })),
+      landedCostBreakdownUsd: {
+        fobPrice: fob,
+        estimatedFreightInsurance: freightIns,
+        appliedDutyCost: duty,
+        effectiveLandedPrice: round1(fob + freightIns + duty),
+      },
+    },
+    tariffAndRegulatory: {
+      mfnTariffRatePercent: m.tariffRate,
+      preferentialFtaRatePercent: p?.ftaRate ?? null,
+      activeFtaName: p?.fta ?? null,
+      nonTariffMeasures: [
+        {
+          type: "TBT",
+          title: "Electrical safety & EMC conformity",
+          mandatoryCertifications: m.region === "EMEA" ? ["CE", "UKCA", "RoHS"] : ["UL / IEC 60335", "FCC Part 15"],
+        },
+        {
+          type: "Labeling",
+          title: "Local-language labeling & country of origin marking",
+          mandatoryCertifications: m.region === "LATAM" ? ["NOM-024", "Spanish label"] : ["Origin mark", "Local-language manual"],
+        },
+        {
+          type: "Pre-Shipment",
+          title: "Pre-shipment inspection for consumer mobility goods",
+          mandatoryCertifications: ["PSI certificate", "Packing list attestation"],
+        },
+      ],
+      tradeBarriers:
+        m.tariffRate >= 20
+          ? [
+              {
+                type: "Anti-Dumping",
+                description: "Provisional anti-dumping duty on lithium-powered wheeled goods from selected origins.",
+                impactLevel: "high",
+              },
+            ]
+          : m.tariffRate >= 10
+            ? [{ type: "Quota", description: "Tariff-rate quota applies above 12,000 units per calendar year.", impactLevel: "medium" }]
+            : [{ type: "Quota", description: "No active quota; standard clearance regime.", impactLevel: "low" }],
+    },
+    supplyConcentration: {
+      supplyingCountriesBreakdown: suppliers,
+      hhiIndexScore: hhi,
+      hhiMarketType,
+      shipmentRecords: {
+        activeBuyerCount: Math.round(180 + m.searchVelocity * 2.4),
+        activeSupplierCount: Math.round(60 + m.teuVolume * 1.8 + 20),
+        annualTeuVolume: Math.round(9_000 + m.teuVolume * 220 + m.landedCost * 30),
+      },
+    },
+    algorithmicFitScores: {
+      tradeComplementarityScore: Math.min(99, Math.round(52 + m.searchVelocity / 4 - m.tariffRate / 2)),
+      marketAttractivenessIndex: Math.min(
+        99,
+        Math.round(46 + m.searchVelocity / 3.4 - m.tariffRate * 0.9 - m.freightCost / 400 + m.stockoutRate / 4),
+      ),
+      competitiveDistanceUsd: round1(fob - unitValue * 0.62),
+    },
+    logisticsAndMacro: {
+      averageTransitDays: p?.transitDays ?? 28,
+      spotFreightRatePerTeuUsd: m.freightCost,
+      currencyVolatilityIndex: p?.currency ?? { currencyCode: "USD", changeYoYPercent: -1.2, stability: "Moderate" },
+      geopoliticalSovereignRisk: p?.risk ?? { creditRating: "BBB-", easeOfImportRank: 84 },
+    },
+  };
+}

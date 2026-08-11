@@ -4,6 +4,7 @@ import {
   commerceSeries,
   demandSeries,
   getMarketFit,
+  getTradeFit,
   landedCostBreakdown,
   signum,
   supplySeries,
@@ -16,12 +17,36 @@ import {
   LocalizationPanel,
   RiskPanel,
 } from "@/components/tradepulse/MarketFitPanels";
+import {
+  FitScorePanel,
+  LogisticsMacroPanel,
+  MacroDemandPanel,
+  PricingPanel,
+  SupplyConcentrationPanel,
+  TariffPanel,
+} from "@/components/tradepulse/TradeFitPanels";
 
-const TABS = [
+const MODULES = [
+  { id: "trade", label: "Trade Data" },
+  { id: "social", label: "Social Listening" },
+] as const;
+
+type ModuleId = (typeof MODULES)[number]["id"];
+
+const TRADE_TABS = [
   { id: "demand", label: "Demand Signals" },
   { id: "supply", label: "Supply & Manifests" },
   { id: "commerce", label: "Local E-Commerce" },
   { id: "cost", label: "Landed Cost" },
+  { id: "macro", label: "Macro Demand" },
+  { id: "pricing", label: "Pricing & Margin" },
+  { id: "tariff", label: "Tariff & Access" },
+  { id: "concentration", label: "Supply Concentration" },
+  { id: "fit", label: "Demand Fit Score" },
+  { id: "logistics", label: "Logistics & Macro" },
+] as const;
+
+const SOCIAL_TABS = [
   { id: "intent", label: "Intent & Chatter" },
   { id: "sov", label: "Competitive SOV" },
   { id: "localization", label: "Localization" },
@@ -29,7 +54,8 @@ const TABS = [
   { id: "risk", label: "Friction & Risk" },
 ] as const;
 
-type TabId = (typeof TABS)[number]["id"];
+type TabId = (typeof TRADE_TABS)[number]["id"] | (typeof SOCIAL_TABS)[number]["id"];
+
 
 
 function MiniChart({
@@ -90,12 +116,14 @@ export function CountryDrawer({
   currency: string;
   onClose: () => void;
 }) {
+  const [module_, setModule] = useState<ModuleId>("trade");
   const [tab, setTab] = useState<TabId>("demand");
   const panelRef = useRef<HTMLDivElement>(null);
   const open = market !== null;
 
   useEffect(() => {
     if (!open) return undefined;
+    setModule("trade");
     setTab("demand");
     const prev = document.activeElement as HTMLElement | null;
     panelRef.current?.querySelector<HTMLElement>("button")?.focus();
@@ -133,6 +161,7 @@ export function CountryDrawer({
   if (!market) return null;
   const breakdown = landedCostBreakdown(market);
   const fit = getMarketFit(market);
+  const tradeFit = getTradeFit(market);
 
 
   return (
@@ -169,8 +198,33 @@ export function CountryDrawer({
           </button>
         </header>
 
-        <div role="tablist" aria-label="Signal analytics tabs" className="flex overflow-x-auto border-b border-border">
-          {TABS.map((t) => (
+        <div className="flex gap-1 border-b border-border bg-canvas p-2" role="group" aria-label="Intelligence module">
+          {MODULES.map((m) => (
+            <button
+              key={m.id}
+              type="button"
+              aria-pressed={module_ === m.id}
+              onClick={() => {
+                setModule(m.id);
+                setTab(m.id === "trade" ? "demand" : "intent");
+              }}
+              className={`flex-1 rounded-md px-3 py-2 text-xs font-medium transition-colors ${
+                module_ === m.id
+                  ? "border border-border-strong bg-surface text-foreground"
+                  : "border border-transparent text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              {m.label}
+            </button>
+          ))}
+        </div>
+
+        <div
+          role="tablist"
+          aria-label={module_ === "trade" ? "Trade data analytics tabs" : "Social listening analytics tabs"}
+          className="flex overflow-x-auto border-b border-border"
+        >
+          {(module_ === "trade" ? TRADE_TABS : SOCIAL_TABS).map((t) => (
             <button
               key={t.id}
               role="tab"
@@ -188,6 +242,7 @@ export function CountryDrawer({
             </button>
           ))}
         </div>
+
 
         <div className="min-h-0 flex-1 overflow-y-auto p-4">
           {tab === "demand" && (
@@ -269,6 +324,36 @@ export function CountryDrawer({
           {tab === "risk" && (
             <div role="tabpanel" id="panel-risk" aria-labelledby="tab-risk">
               <RiskPanel fit={fit} />
+            </div>
+          )}
+          {tab === "macro" && (
+            <div role="tabpanel" id="panel-macro" aria-labelledby="tab-macro">
+              <MacroDemandPanel fit={tradeFit} />
+            </div>
+          )}
+          {tab === "pricing" && (
+            <div role="tabpanel" id="panel-pricing" aria-labelledby="tab-pricing">
+              <PricingPanel fit={tradeFit} />
+            </div>
+          )}
+          {tab === "tariff" && (
+            <div role="tabpanel" id="panel-tariff" aria-labelledby="tab-tariff">
+              <TariffPanel fit={tradeFit} />
+            </div>
+          )}
+          {tab === "concentration" && (
+            <div role="tabpanel" id="panel-concentration" aria-labelledby="tab-concentration">
+              <SupplyConcentrationPanel fit={tradeFit} />
+            </div>
+          )}
+          {tab === "fit" && (
+            <div role="tabpanel" id="panel-fit" aria-labelledby="tab-fit">
+              <FitScorePanel fit={tradeFit} />
+            </div>
+          )}
+          {tab === "logistics" && (
+            <div role="tabpanel" id="panel-logistics" aria-labelledby="tab-logistics">
+              <LogisticsMacroPanel fit={tradeFit} />
             </div>
           )}
         </div>
