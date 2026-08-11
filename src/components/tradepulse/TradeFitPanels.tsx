@@ -161,7 +161,7 @@ export function TariffPanel({ fit }: { fit: TradeDataMarketFit }) {
         <Stat
           label={t.activeFtaName ? `Preferential (${t.activeFtaName})` : "Preferential rate"}
           value={t.preferentialFtaRatePercent === null ? "None available" : `${t.preferentialFtaRatePercent.toFixed(1)}%`}
-          tone={t.preferentialFtaRatePercent === 0 ? "text-signal-green" : undefined}
+          tone={t.preferentialFtaRatePercent === 0 ? "text-signal-green" : "text-foreground"}
         />
       </div>
 
